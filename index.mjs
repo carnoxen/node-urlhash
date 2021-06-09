@@ -1,12 +1,9 @@
 import express from 'express';
-import expressThymeleaf from 'express-thymeleaf';
-import { TemplateEngine } from 'thymeleaf';
 import { createHmac } from 'crypto';
 import mysql from 'mysql';
 
 // Configure your application to use Thymeleaf via the express-thymeleaf module
 const app = express();
-const templateEngine = new TemplateEngine();
 
 const connection = mysql.createConnection({
     user: "root",
@@ -17,26 +14,13 @@ const connection = mysql.createConnection({
 connection.connect();
 
 app.use(express.json());
+app.use(express.urlencoded({extended:true}));
 
-app.engine('html', expressThymeleaf(templateEngine));
-app.set('view engine', 'html');
+app.set('view engine', 'ejs');
 
 // Render views as you would normally in response to requests
 app.get('/', (_request, response) => {
     response.render('index');
-});
-
-app.get('/:hash', (request, response) => {
-    connection.query("select url from shortenings where hash like ?", 
-        [request.params.hash], 
-        (error, results) => {
-            if (!error) {
-                response.redirect(results[0].url);
-            }
-            else {
-                console.error(error);
-            }
-        });
 });
 
 app.get('/link', (request, response) => {
@@ -48,6 +32,7 @@ app.get('/link', (request, response) => {
             }
             else {
                 console.error(error);
+                response.redirect("/");
             }
         });
 });
@@ -59,8 +44,17 @@ app.post('/insert', (request, response) => {
                     .update(url)
                     .digest('hex').toString();
 
-    connection.query("insert into shortenings values(?,?)", [hash, url]);
-    response.render("insert", {hash, url});
+    connection.query("insert into shortenings values(?,?)", 
+        [hash, url], 
+        (error, _) => {
+            if (!error) {
+                //
+                response.render("insert", {result: `${hash}: ${url}`});
+            }
+            else {
+                response.render("insert", {result: `already generated`});
+            }
+        });
 });
 
-app.listen(3000);
+app.listen(3000, () => console.log(`hello http://localhost:3000 !`));
