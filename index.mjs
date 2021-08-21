@@ -24,14 +24,14 @@ app.get('/', (_request, response) => {
 // redirect action
 app.get('/link', (request, response) => {
     connection.query("select url from shortenings where hash like ?", 
-        [request.query.hash], 
+        [request.query.hash.trim()], 
         (error, results) => {
             if (!error) {
                 response.redirect(results[0].url);
             }
             else {
                 console.error(error);
-                response.redirect("/");
+                response.render("index", {result: `hash not found`});
             }
         });
 });
@@ -39,7 +39,7 @@ app.get('/link', (request, response) => {
 // insert hash and url
 app.post('/insert', (request, response) => {
     //
-    const url = request.body.url;
+    const url = request.body.url.trim();
     const hash = createHmac("sha256", "hello world")
                     .update(url)
                     .digest('hex').toString();
@@ -49,10 +49,10 @@ app.post('/insert', (request, response) => {
         (error, _) => {
             if (!error) {
                 //
-                response.render("insert", {result: `${hash}: ${url}`});
+                response.render("index", {result: `hash generated: ${hash}(${url})`});
             }
             else {
-                response.render("insert", {result: `already generated`});
+                response.render("index", {result: `already generated. your hash is ${hash}`});
             }
         });
 });
